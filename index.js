@@ -41,11 +41,27 @@ class Vec {
     );
   }
 
+  add(other) {
+    return new Vec(
+      this.x + other.x,
+      this.y + other.y,
+      this.z + other.z,
+    );
+  }
+
   subtract(other) {
     return new Vec(
       this.x - other.x,
       this.y - other.y,
       this.z - other.z,
+    );
+  }
+
+  scale(scalar) {
+    return new Vec(
+      this.x * scalar,
+      this.y * scalar,
+      this.z * scalar,
     );
   }
 
@@ -78,7 +94,7 @@ class Camera {
   }
 
   trace(x, y) {
-    const direction = this.film.project(x, y);
+    const direction = this.film.project(x, y).normalize();
     return new Ray(this.eye, direction);
   }
 }
@@ -87,6 +103,10 @@ class Ray {
   constructor(origin, direction) {
     this.origin = origin;
     this.direction = direction;
+  }
+
+  at(t) {
+    return this.origin.add(this.direction.scale(t));
   }
 }
 
@@ -122,18 +142,60 @@ class Sphere {
       return null;
     }
   }
+
+  surfaceNormal(point) {
+    return point.subtract(this.center).normalize();
+  }
+}
+
+class Light {
+  constructor(center, power) {
+    this.center = center;
+    this.power = power;
+  }
+
+  illuminate(point, normal, spheres) {
+    const pointToLight = this.center.subtract(point);
+    const length = pointToLight.length();
+
+    const shadowRay = new Ray(point, pointToLight.normalize());
+    const occluded = spheres.some(s => {
+      const t = s.intersect(shadowRay);
+      return t !== null && t > 1e-10 && t < length;
+    })
+
+    if (occluded) {
+      return 0;
+    }
+
+    const cosine = pointToLight.dot(normal) / length;
+
+    const numerator = this.power * cosine;
+    const denominator = 4 * Math.PI * sqr(length);
+
+    const power = numerator / denominator;
+
+    return power > 0 ? power : 0;
+  }
 }
 
 (function() {
   const canvas = new Canvas(document.getElementById('canvas'));
 
-  const eye = new Vec(0, 0, 0);
-  const film = new Film(new Vec(-1, 1.5, 1), new Vec(1, 0, 1));
+  const eye = new Vec(0, 0, 0.3);
+  const film = new Film(new Vec(-0.8, 1.2, 1.3), new Vec(1.2, -0.3, 1.3));
   const camera = new Camera(eye, film);
   const spheres = [
     new Sphere(new Vec(0, 1, 5), 1, [255, 0, 150]),
     new Sphere(new Vec(1, 1, 5), 1, [0, 255, 0]),
     new Sphere(new Vec(2, 1, 5), 1, [0, 0, 255]),
+    new Sphere(new Vec(-1, 1.5, 4), 0.2, [255, 255, 0]),
+  ];
+
+  const lights = [
+    new Light(new Vec(5, 5, 5), 400),
+    new Light(new Vec(-5, 3, 1), 300),
+    new Light(new Vec(-0.8, 1.3, 4.1), 1),
   ];
 
   const render = () => {
@@ -143,18 +205,27 @@ class Sphere {
 
         let min = { t: Infinity, sphere: null };
 
-        for (let sphere of spheres) {
+        for (const sphere of spheres) {
           const t = sphere.intersect(ray);
           if (t !== null && t < min.t) {
             min = { t, sphere };
           }
         }
 
-        const { sphere } = min;
+        const { t, sphere } = min;
         if (sphere) {
-          canvas.setPixel(x, y, sphere.color);
+          const intersection = ray.at(t);
+          const normal = sphere.surfaceNormal(intersection);
+
+          const energy = lights.reduce((acc, light) => (
+            acc + light.illuminate(intersection, normal, spheres)
+          ), 0);
+
+          const shade = sphere.color.map(c => c * energy);
+
+          canvas.setPixel(x, y, shade);
         } else {
-          canvas.setPixel(x, y, [0, 0, 0]);
+          canvas.setPixel(x, y, [30, 30, 30]);
         }
       }
     }
