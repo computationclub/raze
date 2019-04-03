@@ -211,7 +211,7 @@ class Light {
   const film = new Film(new Vec(-0.8, 1.2, 1.3), new Vec(1.2, -0.3, 1.3));
   const camera = new Camera(eye, film);
   const spheres = [
-    new Sphere(new Vec(-1, 1, 5), 0.7, new Color(255, 0, 150), 0.5),
+    new Sphere(new Vec(-1, 1, 5), 0.7, new Color(255, 0, 50), 0.5),
     new Sphere(new Vec(1, 1, 5), 0.7, new Color(0, 255, 0), 0.8),
     new Sphere(new Vec(3, 1, 5), 0.7, new Color(0, 0, 255), 0),
     new Sphere(new Vec(-1, 2, 4), 0.2, new Color(255, 255, 0), 0.7),
@@ -270,7 +270,9 @@ class Light {
       return shade.scale(1 - sphere.reflectance)
         .add(reflectionColor.scale(sphere.reflectance));
     } else {
-      return new Color(30, 30, 30);
+      let y = Math.max(0.1, ray.direction.y);
+
+      return new Color(255, 255, 255).scale(y);
     }
   }
 
