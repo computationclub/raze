@@ -10,14 +10,38 @@ class Canvas {
 
   setPixel(x, y, color) {
     let i = 4 * (y * this.width + x);
-    this.image.data[i++] = color[0];
-    this.image.data[i++] = color[1];
-    this.image.data[i++] = color[2];
+    this.image.data[i++] = color.r;
+    this.image.data[i++] = color.g;
+    this.image.data[i++] = color.b;
     this.image.data[i] = 255;
   }
 
   render() {
     this.ctx.putImageData(this.image, 0, 0);
+  }
+}
+
+class Color {
+  constructor(r, g, b) {
+    this.r = r;
+    this.g = g;
+    this.b = b;
+  }
+
+  add(other) {
+    return new Color(
+      this.r + other.r,
+      this.g + other.g,
+      this.b + other.b,
+    );
+  }
+
+  scale(scalar) {
+    return new Color(
+      this.r * scalar,
+      this.g * scalar,
+      this.b * scalar,
+    );
   }
 }
 
@@ -186,10 +210,10 @@ class Light {
   const film = new Film(new Vec(-0.8, 1.2, 1.3), new Vec(1.2, -0.3, 1.3));
   const camera = new Camera(eye, film);
   const spheres = [
-    new Sphere(new Vec(-1, 1, 5), 0.7, [255, 0, 150]),
-    new Sphere(new Vec(1, 1, 5), 0.7, [0, 255, 0]),
-    new Sphere(new Vec(3, 1, 5), 0.7, [0, 0, 255]),
-    new Sphere(new Vec(-1, 2, 4), 0.2, [255, 255, 0]),
+    new Sphere(new Vec(-1, 1, 5), 0.7, new Color(255, 0, 150)),
+    new Sphere(new Vec(1, 1, 5), 0.7, new Color(0, 255, 0)),
+    new Sphere(new Vec(3, 1, 5), 0.7, new Color(0, 0, 255)),
+    new Sphere(new Vec(-1, 2, 4), 0.2, new Color(255, 255, 0)),
   ];
 
   const lights = [
@@ -212,7 +236,7 @@ class Light {
 
   const trace = (ray, remainingCalls) => {
     if (remainingCalls <= 0) {
-      return [0, 0, 0];
+      return new Color(0, 0, 0);
     }
 
     let min = { t: Infinity, sphere: null };
@@ -233,7 +257,7 @@ class Light {
         acc + light.illuminate(intersection, normal, spheres)
       ), 0);
 
-      const shade = sphere.color.map(c => c * energy);
+      const shade = sphere.color.scale(energy);
 
       const dot = ray.direction.dot(normal);
       const rPrime = ray.direction.subtract(normal.scale(2 * dot));
@@ -242,15 +266,9 @@ class Light {
       const reflectionRay = new Ray(justOutsideSphere, rPrime);
       const reflectionColor = trace(reflectionRay, remainingCalls - 1);
 
-
-
-      return [
-        Math.min(255, shade[0] + Math.max(reflectionColor[0], 0)),
-        Math.min(255, shade[1] + Math.max(reflectionColor[1], 0)),
-        Math.min(255, shade[2] + Math.max(reflectionColor[2], 0))
-      ];
+      return shade.add(reflectionColor);
     } else {
-      return [30, 30, 30];
+      return new Color(30, 30, 30);
     }
   }
 
