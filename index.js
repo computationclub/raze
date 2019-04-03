@@ -212,9 +212,9 @@ class Light {
   const camera = new Camera(eye, film);
   const spheres = [
     new Sphere(new Vec(-1, 1, 5), 0.7, new Color(255, 0, 50), 0.5),
-    new Sphere(new Vec(1, 1, 5), 0.7, new Color(0, 255, 0), 0.8),
-    new Sphere(new Vec(3, 1, 5), 0.7, new Color(0, 0, 255), 0),
-    new Sphere(new Vec(-1, 2, 4), 0.2, new Color(255, 255, 0), 0.7),
+    new Sphere(new Vec(1, 1, 5), 0.7, new Color(50, 255, 0), 0.8),
+    new Sphere(new Vec(3, 1, 5), 0.7, new Color(50, 100, 255), 0),
+    new Sphere(new Vec(-1, 2, 4), 0.2, new Color(220, 220, 75), 0.7),
   ];
 
   const lights = [
@@ -267,8 +267,14 @@ class Light {
       const reflectionRay = new Ray(justOutsideSphere, rPrime);
       const reflectionColor = trace(reflectionRay, remainingCalls - 1);
 
+      const reflectanceThing = sphere.color.scale(sphere.reflectance / 255);
+
       return shade.scale(1 - sphere.reflectance)
-        .add(reflectionColor.scale(sphere.reflectance));
+        .add(new Color(
+          reflectionColor.r * reflectanceThing.r,
+          reflectionColor.g * reflectanceThing.g,
+          reflectionColor.b * reflectanceThing.b,
+        ));
     } else {
       let y = Math.max(0.1, ray.direction.y);
 
