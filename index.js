@@ -137,10 +137,11 @@ class Ray {
 const sqr = n => n * n;
 
 class Sphere {
-  constructor(center, radius, color) {
+  constructor(center, radius, color, reflectance) {
     this.center = center;
     this.radius = radius;
     this.color = color;
+    this.reflectance = reflectance;
   }
 
   intersect(ray) {
@@ -210,16 +211,16 @@ class Light {
   const film = new Film(new Vec(-0.8, 1.2, 1.3), new Vec(1.2, -0.3, 1.3));
   const camera = new Camera(eye, film);
   const spheres = [
-    new Sphere(new Vec(-1, 1, 5), 0.7, new Color(255, 0, 150)),
-    new Sphere(new Vec(1, 1, 5), 0.7, new Color(0, 255, 0)),
-    new Sphere(new Vec(3, 1, 5), 0.7, new Color(0, 0, 255)),
-    new Sphere(new Vec(-1, 2, 4), 0.2, new Color(255, 255, 0)),
+    new Sphere(new Vec(-1, 1, 5), 0.7, new Color(255, 0, 150), 0.5),
+    new Sphere(new Vec(1, 1, 5), 0.7, new Color(0, 255, 0), 0.8),
+    new Sphere(new Vec(3, 1, 5), 0.7, new Color(0, 0, 255), 0),
+    new Sphere(new Vec(-1, 2, 4), 0.2, new Color(255, 255, 0), 0.7),
   ];
 
   const lights = [
-    new Light(new Vec(5, 5, 5), 400),
-    new Light(new Vec(-5, 3, 1), 300),
-    new Light(new Vec(-0.8, 1.3, 4.1), 1),
+    new Light(new Vec(5, 5, 5), 500),
+    new Light(new Vec(-5, 3, 1), 400),
+    new Light(new Vec(-0.8, 1.3, 4.1), 2),
   ];
 
   const render = () => {
@@ -266,7 +267,8 @@ class Light {
       const reflectionRay = new Ray(justOutsideSphere, rPrime);
       const reflectionColor = trace(reflectionRay, remainingCalls - 1);
 
-      return shade.add(reflectionColor);
+      return shade.scale(1 - sphere.reflectance)
+        .add(reflectionColor.scale(sphere.reflectance));
     } else {
       return new Color(30, 30, 30);
     }
