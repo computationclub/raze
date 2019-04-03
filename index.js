@@ -186,10 +186,10 @@ class Light {
   const film = new Film(new Vec(-0.8, 1.2, 1.3), new Vec(1.2, -0.3, 1.3));
   const camera = new Camera(eye, film);
   const spheres = [
-    new Sphere(new Vec(0, 1, 5), 1, [255, 0, 150]),
-    new Sphere(new Vec(1, 1, 5), 1, [0, 255, 0]),
-    new Sphere(new Vec(2, 1, 5), 1, [0, 0, 255]),
-    new Sphere(new Vec(-1, 1.5, 4), 0.2, [255, 255, 0]),
+    new Sphere(new Vec(-1, 1, 5), 0.7, [255, 0, 150]),
+    new Sphere(new Vec(1, 1, 5), 0.7, [0, 255, 0]),
+    new Sphere(new Vec(3, 1, 5), 0.7, [0, 0, 255]),
+    new Sphere(new Vec(-1, 2, 4), 0.2, [255, 255, 0]),
   ];
 
   const lights = [
@@ -203,34 +203,55 @@ class Light {
       for (let x = 0; x < canvas.width; x++) {
         const ray = camera.trace(x / canvas.width, y / canvas.height);
 
-        let min = { t: Infinity, sphere: null };
-
-        for (const sphere of spheres) {
-          const t = sphere.intersect(ray);
-          if (t !== null && t < min.t) {
-            min = { t, sphere };
-          }
-        }
-
-        const { t, sphere } = min;
-        if (sphere) {
-          const intersection = ray.at(t);
-          const normal = sphere.surfaceNormal(intersection);
-
-          const energy = lights.reduce((acc, light) => (
-            acc + light.illuminate(intersection, normal, spheres)
-          ), 0);
-
-          const shade = sphere.color.map(c => c * energy);
-
-          canvas.setPixel(x, y, shade);
-        } else {
-          canvas.setPixel(x, y, [30, 30, 30]);
-        }
+        canvas.setPixel(x, y, trace(ray, 5));
       }
     }
 
     canvas.render();
+  }
+
+  const trace = (ray, remainingCalls) => {
+    if (remainingCalls <= 0) {
+      return [0, 0, 0];
+    }
+
+    let min = { t: Infinity, sphere: null };
+
+    for (const sphere of spheres) {
+      const t = sphere.intersect(ray);
+      if (t !== null && t < min.t) {
+        min = { t, sphere };
+      }
+    }
+
+    const { t, sphere } = min;
+    if (sphere) {
+      const intersection = ray.at(t);
+      const normal = sphere.surfaceNormal(intersection);
+
+      const energy = lights.reduce((acc, light) => (
+        acc + light.illuminate(intersection, normal, spheres)
+      ), 0);
+
+      const shade = sphere.color.map(c => c * energy);
+
+      const dot = ray.direction.dot(normal);
+      const rPrime = ray.direction.subtract(normal.scale(2 * dot));
+      const justOutsideSphere = intersection.add(normal.scale(1e-10));
+
+      const reflectionRay = new Ray(justOutsideSphere, rPrime);
+      const reflectionColor = trace(reflectionRay, remainingCalls - 1);
+
+
+
+      return [
+        Math.min(255, shade[0] + Math.max(reflectionColor[0], 0)),
+        Math.min(255, shade[1] + Math.max(reflectionColor[1], 0)),
+        Math.min(255, shade[2] + Math.max(reflectionColor[2], 0))
+      ];
+    } else {
+      return [30, 30, 30];
+    }
   }
 
   render();
