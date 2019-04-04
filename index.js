@@ -171,6 +171,10 @@ class Sphere {
   surfaceNormal(point) {
     return point.subtract(this.center).normalize();
   }
+
+  colorAt(point) {
+    return this.color;
+  }
 }
 
 class Plane {
@@ -195,6 +199,16 @@ class Plane {
 
   surfaceNormal(point) {
     return this.normal;
+  }
+
+  colorAt(point) {
+    const thing = Math.round(point.x) + Math.round(point.z);
+
+    if (thing % 2 === 0) {
+      return new Color(10, 10, 10);
+    } else {
+      return this.color;
+    }
   }
 }
 
@@ -262,7 +276,7 @@ class Light {
       for (let x = 0; x < canvas.width; x++) {
         const ray = camera.trace(x / canvas.width, y / canvas.height);
 
-        const color = trace(ray, 5) || background(ray)
+        const color = trace(ray, 50) || background(ray)
 
         canvas.setPixel(x, y, color);
       }
@@ -287,6 +301,7 @@ class Light {
     }
 
     const { t, object } = min;
+
     if (object) {
       const intersection = ray.at(t);
       const normal = object.surfaceNormal(intersection);
@@ -295,7 +310,9 @@ class Light {
         acc + light.illuminate(intersection, normal, objects)
       ), 0);
 
-      const shade = object.color.scale(energy);
+      const color = object.colorAt(intersection);
+
+      const shade = color.scale(energy);
 
       const dot = ray.direction.dot(normal);
       const rPrime = ray.direction.subtract(normal.scale(2 * dot));
@@ -304,7 +321,7 @@ class Light {
       const reflectionRay = new Ray(justOutsideSphere, rPrime);
       const reflectionColor = trace(reflectionRay, remainingCalls - 1) || new Color(0, 0, 0);
 
-      const albedo = sphere.color.scale(object.reflectance / 255);
+      const albedo = color.scale(object.reflectance / 255);
 
       return shade.scale(1 - object.reflectance)
         .add(new Color(
