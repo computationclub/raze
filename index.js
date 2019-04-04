@@ -223,12 +223,20 @@ class Light {
     new Light(new Vec(-0.8, 1.3, 4.1), 2),
   ];
 
+  const background = (ray) => {
+    let y = Math.max(0.1, ray.direction.y);
+
+    return new Color(255, 255, 255).scale(y);
+  }
+
   const render = () => {
     for (let y = 0; y < canvas.height; y++) {
       for (let x = 0; x < canvas.width; x++) {
         const ray = camera.trace(x / canvas.width, y / canvas.height);
 
-        canvas.setPixel(x, y, trace(ray, 5));
+        const color = trace(ray, 5) || background(ray)
+
+        canvas.setPixel(x, y, color);
       }
     }
 
@@ -237,7 +245,7 @@ class Light {
 
   const trace = (ray, remainingCalls) => {
     if (remainingCalls <= 0) {
-      return new Color(0, 0, 0);
+      return null;
     }
 
     let min = { t: Infinity, sphere: null };
@@ -265,7 +273,7 @@ class Light {
       const justOutsideSphere = intersection.add(normal.scale(1e-10));
 
       const reflectionRay = new Ray(justOutsideSphere, rPrime);
-      const reflectionColor = trace(reflectionRay, remainingCalls - 1);
+      const reflectionColor = trace(reflectionRay, remainingCalls - 1) || new Color(0, 0, 0);
 
       const reflectanceThing = sphere.color.scale(sphere.reflectance / 255);
 
@@ -276,9 +284,7 @@ class Light {
           reflectionColor.b * reflectanceThing.b,
         ));
     } else {
-      let y = Math.max(0.1, ray.direction.y);
-
-      return new Color(255, 255, 255).scale(y);
+      return null;
     }
   }
 
