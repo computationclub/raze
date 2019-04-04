@@ -202,7 +202,13 @@ class Plane {
   }
 
   colorAt(point) {
-    return this.color;
+    const thing = Math.round(point.x) + Math.round(point.z);
+
+    if (thing % 2 === 0) {
+      return new Color(10, 10, 10);
+    } else {
+      return this.color;
+    }
   }
 }
 
