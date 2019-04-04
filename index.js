@@ -173,18 +173,43 @@ class Sphere {
   }
 }
 
+class Plane {
+  constructor(point, normal, color, reflectance) {
+    this.point = point;
+    this.normal = normal.normalize();
+    this.color = color;
+    this.reflectance = reflectance;
+  }
+
+  intersect(ray) {
+    const ndotl = this.normal.dot(ray.direction);
+
+    if (Math.abs(ndotl) < 1e-10) { return null; }
+
+    const t = this.normal.dot(this.point.subtract(ray.origin)) / ndotl;
+
+    if (t < 0) { return null; }
+
+    return t;
+  }
+
+  surfaceNormal(point) {
+    return this.normal;
+  }
+}
+
 class Light {
   constructor(center, power) {
     this.center = center;
     this.power = power;
   }
 
-  illuminate(point, normal, spheres) {
+  illuminate(point, normal, objects) {
     const pointToLight = this.center.subtract(point);
     const length = pointToLight.length();
 
     const shadowRay = new Ray(point, pointToLight.normalize());
-    const occluded = spheres.some(s => {
+    const occluded = objects.some(s => {
       const t = s.intersect(shadowRay);
       return t !== null && t > 1e-10 && t < length;
     })
@@ -210,11 +235,13 @@ class Light {
   const eye = new Vec(0, 0, 0.3);
   const film = new Film(new Vec(-0.8, 1.2, 1.3), new Vec(1.2, -0.3, 1.3));
   const camera = new Camera(eye, film);
-  const spheres = [
+  const objects = [
     new Sphere(new Vec(-1,  1, 5), 0.8, new Color(255, 50,  50),  0.5),
     new Sphere(new Vec(1,   1, 5), 0.8, new Color(50,  255, 100), 0.8),
     new Sphere(new Vec(2.5, 1, 5), 0.8, new Color(50,  100, 255), 0),
     new Sphere(new Vec(-1,  2, 4), 0.2, new Color(220, 220, 75),  0.7),
+
+    new Plane(new Vec(0, -1, 0), new Vec(0, 1, 0), new Color(75, 75, 75), 0),
   ];
 
   const lights = [
@@ -249,25 +276,26 @@ class Light {
       return null;
     }
 
-    let min = { t: Infinity, sphere: null };
+    let min = { t: Infinity, object: null };
 
-    for (const sphere of spheres) {
-      const t = sphere.intersect(ray);
+    for (const object of objects) {
+      const t = object.intersect(ray);
+
       if (t !== null && t < min.t) {
-        min = { t, sphere };
+        min = { t, object };
       }
     }
 
-    const { t, sphere } = min;
-    if (sphere) {
+    const { t, object } = min;
+    if (object) {
       const intersection = ray.at(t);
-      const normal = sphere.surfaceNormal(intersection);
+      const normal = object.surfaceNormal(intersection);
 
       const energy = lights.reduce((acc, light) => (
-        acc + light.illuminate(intersection, normal, spheres)
+        acc + light.illuminate(intersection, normal, objects)
       ), 0);
 
-      const shade = sphere.color.scale(energy);
+      const shade = object.color.scale(energy);
 
       const dot = ray.direction.dot(normal);
       const rPrime = ray.direction.subtract(normal.scale(2 * dot));
@@ -276,9 +304,9 @@ class Light {
       const reflectionRay = new Ray(justOutsideSphere, rPrime);
       const reflectionColor = trace(reflectionRay, remainingCalls - 1) || new Color(0, 0, 0);
 
-      const albedo = sphere.color.scale(sphere.reflectance / 255);
+      const albedo = sphere.color.scale(object.reflectance / 255);
 
-      return shade.scale(1 - sphere.reflectance)
+      return shade.scale(1 - object.reflectance)
         .add(new Color(
           reflectionColor.r * albedo.r,
           reflectionColor.g * albedo.g,
