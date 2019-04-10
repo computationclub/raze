@@ -118,7 +118,7 @@ class Camera {
   }
 
   trace(x, y) {
-    const direction = this.film.project(x, y).normalize();
+    const direction = this.film.project(x, y).subtract(this.eye).normalize();
     return new Ray(this.eye, direction);
   }
 }
