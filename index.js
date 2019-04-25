@@ -226,6 +226,24 @@ class BlurryReflectiveMaterial {
   }
 }
 
+class LambertianMaterial {
+  constructor(color, reflectance) {
+    this.color = color;
+    this.reflectance = reflectance;
+  }
+
+  scatter(incomingRay, intersectionPoint, normal) {
+    let rand, randomVector, randomInUnitSphere;
+
+    do {
+      randomVector = new Vec(Math.random(), Math.random(), Math.random());
+      randomInUnitSphere = randomVector.scale(2.0).subtract(new Vec(1.0, 1.0, 1.0));
+    } while (randomInUnitSphere.length() >= 1.0)
+
+    return intersectionPoint.add(normal).add(randomInUnitSphere);
+  }
+}
+
 class Light {
   constructor(center, power) {
     this.center = center;
