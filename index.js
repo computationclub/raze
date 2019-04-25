@@ -118,7 +118,7 @@ class Camera {
   }
 
   trace(x, y) {
-    const direction = this.film.project(x, y).normalize();
+    const direction = this.film.project(x, y).subtract(this.eye).normalize();
     return new Ray(this.eye, direction);
   }
 }
@@ -250,12 +250,12 @@ class Light {
   const film = new Film(new Vec(-0.8, 1.2, 1.3), new Vec(1.2, -0.3, 1.3));
   const camera = new Camera(eye, film);
   const objects = [
-    new Sphere(new Vec(-1,  1, 5), 0.8, new Color(255, 50,  50),  0.5),
+    new Sphere(new Vec(-1,  1, 5), 0.8, new Color(255, 50,  50),  0.2),
     new Sphere(new Vec(1,   1, 5), 0.8, new Color(50,  255, 100), 0.8),
     new Sphere(new Vec(2.5, 1, 5), 0.8, new Color(50,  100, 255), 0),
     new Sphere(new Vec(-1,  2, 4), 0.2, new Color(220, 220, 75),  0.7),
 
-    new Plane(new Vec(0, -1, 0), new Vec(0, 1, 0), new Color(75, 75, 75), 0),
+    new Plane(new Vec(0, -1, 0), new Vec(0, 1, 0), new Color(100, 100, 100), 0),
   ];
 
   const lights = [
