@@ -137,11 +137,10 @@ class Ray {
 const sqr = n => n * n;
 
 class Sphere {
-  constructor(center, radius, color, reflectance) {
+  constructor(center, radius, material) {
     this.center = center;
     this.radius = radius;
-    this.color = color;
-    this.reflectance = reflectance;
+    this.material = material;
   }
 
   intersect(ray) {
@@ -173,16 +172,15 @@ class Sphere {
   }
 
   colorAt(point) {
-    return this.color;
+    return this.material.color;
   }
 }
 
 class Plane {
-  constructor(point, normal, color, reflectance) {
+  constructor(point, normal, material) {
     this.point = point;
     this.normal = normal.normalize();
-    this.color = color;
-    this.reflectance = reflectance;
+    this.material = material;
   }
 
   intersect(ray) {
@@ -207,8 +205,24 @@ class Plane {
     if (thing % 2 === 0) {
       return new Color(10, 10, 10);
     } else {
-      return this.color;
+      return this.material.color;
     }
+  }
+}
+
+class BlurryReflectiveMaterial {
+  constructor(color, reflectance) {
+    this.color = color;
+    this.reflectance = reflectance;
+  }
+
+  scatter(incomingRay, intersectionPoint, normal) {
+    const dot = incomingRay.direction.dot(normal);
+    const fuzz = 0.1;
+
+    return incomingRay.direction.subtract(normal.scale(2 * dot)).add(
+      new Vec(Math.random(), Math.random(), Math.random()).scale(fuzz)
+    );
   }
 }
 
@@ -250,12 +264,12 @@ class Light {
   const film = new Film(new Vec(-0.8, 1.2, 1.3), new Vec(1.2, -0.3, 1.3));
   const camera = new Camera(eye, film);
   const objects = [
-    new Sphere(new Vec(-1,  1, 5), 0.8, new Color(255, 50,  50),  0.2),
-    new Sphere(new Vec(1,   1, 5), 0.8, new Color(50,  255, 100), 0.8),
-    new Sphere(new Vec(2.5, 1, 5), 0.8, new Color(50,  100, 255), 0),
-    new Sphere(new Vec(-1,  2, 4), 0.2, new Color(220, 220, 75),  0.7),
+    new Sphere(new Vec(-1,  1, 5), 0.8, new BlurryReflectiveMaterial(new Color(255, 50,  50),  0.2)),
+    new Sphere(new Vec(1,   1, 5), 0.8, new BlurryReflectiveMaterial(new Color(50,  255, 100), 0.8)),
+    new Sphere(new Vec(2.5, 1, 5), 0.8, new BlurryReflectiveMaterial(new Color(50,  100, 255), 0)),
+    new Sphere(new Vec(-1,  2, 4), 0.2, new BlurryReflectiveMaterial(new Color(220, 220, 75),  0.7)),
 
-    new Plane(new Vec(0, -1, 0), new Vec(0, 1, 0), new Color(100, 100, 100), 0),
+    new Plane(new Vec(0, -1, 0), new Vec(0, 1, 0), new BlurryReflectiveMaterial(new Color(100, 100, 100), 0)),
   ];
 
   const lights = [
@@ -290,17 +304,17 @@ class Light {
       return null;
     }
 
-    let min = { t: Infinity, object: null };
+    let min = { t: Infinity, object: null, material: null };
 
     for (const object of objects) {
       const t = object.intersect(ray);
 
       if (t !== null && t < min.t) {
-        min = { t, object };
+        min = { t, object, material: object.material };
       }
     }
 
-    const { t, object } = min;
+    const { t, object, material } = min;
 
     if (object) {
       const intersection = ray.at(t);
@@ -314,16 +328,16 @@ class Light {
 
       const shade = color.scale(energy);
 
-      const dot = ray.direction.dot(normal);
-      const rPrime = ray.direction.subtract(normal.scale(2 * dot));
+      const rPrime = material.scatter(ray, intersection, normal);
+
       const justOutsideSphere = intersection.add(normal.scale(1e-10));
 
       const reflectionRay = new Ray(justOutsideSphere, rPrime);
       const reflectionColor = trace(reflectionRay, remainingCalls - 1) || new Color(0, 0, 0);
 
-      const albedo = color.scale(object.reflectance / 255);
+      const albedo = color.scale(material.reflectance / 255);
 
-      return shade.scale(1 - object.reflectance)
+      return shade.scale(1 - material.reflectance)
         .add(new Color(
           reflectionColor.r * albedo.r,
           reflectionColor.g * albedo.g,
